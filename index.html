@@ -27,12 +27,14 @@
   <ul id="expense-list"></ul>
 
   <p>Всего потрачено: <span id="total">0</span> ₽</p>
+<div id="category-summary"></div>
 <script>
 const expenseList = document.getElementById("expense-list");
 const totalDisplay = document.getElementById("total");
 const descriptionInput = document.getElementById("description");
 const amountInput = document.getElementById("amount");
 const categoryInput = document.getElementById("category");
+const categorySummary = document.getElementById("category-summary");
 
 let expenses = JSON.parse(localStorage.getItem("expenseTrackerData") || "[]");
 
@@ -42,11 +44,15 @@ function saveExpenses() {
 
 function renderExpenses() {
   expenseList.innerHTML = "";
+  categorySummary.innerHTML = "";
+
   let total = 0;
+  const categoryTotals = {};
 
   expenses.forEach(function (expense, index) {
     const item = document.createElement("li");
     const expenseText = document.createElement("span");
+
     expenseText.textContent =
       expense.description + " — " + expense.amount.toFixed(2) +
       " ₽ (" + expense.category + ")";
@@ -66,9 +72,18 @@ function renderExpenses() {
     expenseList.appendChild(item);
 
     total += expense.amount;
+    categoryTotals[expense.category] =
+      (categoryTotals[expense.category] || 0) + expense.amount;
   });
 
   totalDisplay.textContent = total.toFixed(2);
+
+  Object.keys(categoryTotals).forEach(function (category) {
+    const summaryItem = document.createElement("p");
+    summaryItem.textContent =
+      category + ": " + categoryTotals[category].toFixed(2) + " ₽";
+    categorySummary.appendChild(summaryItem);
+  });
 }
 
 document.getElementById("add-expense").addEventListener("click", function () {
@@ -81,7 +96,12 @@ document.getElementById("add-expense").addEventListener("click", function () {
     return;
   }
 
-  expenses.push({ description: description, amount: amount, category: category });
+  expenses.push({
+    description: description,
+    amount: amount,
+    category: category
+  });
+
   saveExpenses();
   renderExpenses();
 
