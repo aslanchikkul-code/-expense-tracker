@@ -47,6 +47,11 @@
 
   <p>Всего потрачено: <span id="total">0</span> ₽</p>
   <div id="category-summary"></div>
+<h2>Отчёт за месяц</h2>
+<label for="month-filter">Выбери месяц:</label>
+<input id="month-filter" type="month">
+<p>Потрачено за месяц: <span id="month-total">0.00</span> ₽</p>
+<div id="month-summary"></div>
 
   <script>
     const expenseList = document.getElementById("expense-list");
@@ -59,7 +64,9 @@
     const categoryFilter = document.getElementById("category-filter");
     const dateFilter = document.getElementById("date-filter");
     const addButton = document.getElementById("add-expense");
-
+const monthFilter = document.getElementById("month-filter");
+const monthTotal = document.getElementById("month-total");
+const monthSummary = document.getElementById("month-summary");
     let expenses = JSON.parse(localStorage.getItem("expenseTrackerData") || "[]");
     let editingIndex = null;
 
@@ -217,6 +224,30 @@
     });
 
     renderExpenses();
+function renderMonthlyReport() {
+  const selectedMonth = monthFilter.value;
+  const totals = {};
+  let total = 0;
+
+  expenses.forEach(function (expense) {
+    if (selectedMonth && expense.date && expense.date.slice(0, 7) === selectedMonth) {
+      total += expense.amount;
+      totals[expense.category] = (totals[expense.category] || 0) + expense.amount;
+    }
+  });
+
+  monthTotal.textContent = total.toFixed(2);
+  monthSummary.innerHTML = "";
+
+  Object.keys(totals).forEach(function (category) {
+    const line = document.createElement("p");
+    line.textContent = category + ": " + totals[category].toFixed(2) + " ₽";
+    monthSummary.appendChild(line);
+  });
+}
+
+monthFilter.addEventListener("change", renderMonthlyReport);
+renderMonthlyReport();
   </script>
 </body>
 </html>
