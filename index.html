@@ -14,6 +14,9 @@
   <label for="amount">Сколько потратил?</label>
   <input id="amount" type="number" min="0.01" step="0.01" placeholder="Например, 180">
 
+  <label for="date">Дата расхода:</label>
+  <input id="date" type="date">
+
   <label for="category">Категория:</label>
   <select id="category">
     <option>Еда</option>
@@ -26,14 +29,18 @@
 
   <h2>Расходы</h2>
 
-  <label for="category-filter">Показать категорию:</label>
+  <label for="category-filter">Категория:</label>
   <select id="category-filter">
-    <option value="Все">Все</option>
+    <option value="Все">Все категории</option>
     <option value="Еда">Еда</option>
     <option value="Транспорт">Транспорт</option>
     <option value="Покупки">Покупки</option>
     <option value="Другое">Другое</option>
   </select>
+
+  <label for="date-filter">Дата:</label>
+  <input id="date-filter" type="date">
+  <button id="clear-date-filter" type="button">Все даты</button>
 
   <ul id="expense-list"></ul>
 
@@ -45,13 +52,23 @@
     const totalDisplay = document.getElementById("total");
     const descriptionInput = document.getElementById("description");
     const amountInput = document.getElementById("amount");
+    const dateInput = document.getElementById("date");
     const categoryInput = document.getElementById("category");
     const categorySummary = document.getElementById("category-summary");
     const categoryFilter = document.getElementById("category-filter");
+    const dateFilter = document.getElementById("date-filter");
     const addButton = document.getElementById("add-expense");
 
     let expenses = JSON.parse(localStorage.getItem("expenseTrackerData") || "[]");
     let editingIndex = null;
+
+    function todayString() {
+      const today = new Date();
+      const timezoneOffset = today.getTimezoneOffset() * 60000;
+      return new Date(today.getTime() - timezoneOffset).toISOString().slice(0, 10);
+    }
+
+    dateInput.value = todayString();
 
     function saveExpenses() {
       localStorage.setItem("expenseTrackerData", JSON.stringify(expenses));
@@ -69,24 +86,35 @@
         categoryTotals[expense.category] =
           (categoryTotals[expense.category] || 0) + expense.amount;
 
-        if (categoryFilter.value !== "Все" &&
-            expense.category !== categoryFilter.value) {
+        const matchesCategory =
+          categoryFilter.value === "Все" ||
+          expense.category === categoryFilter.value;
+
+        const matchesDate =
+          dateFilter.value === "" ||
+          expense.date === dateFilter.value;
+
+        if (!matchesCategory || !matchesDate) {
           return;
         }
 
         const item = document.createElement("li");
         const expenseText = document.createElement("span");
+        const shownDate = expense.date || "Дата не указана";
+
         expenseText.textContent =
           expense.description + " — " + expense.amount.toFixed(2) +
-          " ₽ (" + expense.category + ") ";
+          " ₽ (" + expense.category + ", " + shownDate + ") ";
 
         const editButton = document.createElement("button");
         editButton.textContent = "Изменить";
         editButton.type = "button";
+
         editButton.addEventListener("click", function () {
           editingIndex = index;
           descriptionInput.value = expense.description;
           amountInput.value = expense.amount;
+          dateInput.value = expense.date || todayString();
           categoryInput.value = expense.category;
           addButton.textContent = "Сохранить изменения";
         });
@@ -94,6 +122,7 @@
         const deleteButton = document.createElement("button");
         deleteButton.textContent = "Удалить";
         deleteButton.type = "button";
+
         deleteButton.addEventListener("click", function () {
           expenses.splice(index, 1);
           saveExpenses();
@@ -119,36 +148,45 @@
     addButton.addEventListener("click", function () {
       const description = descriptionInput.value.trim();
       const amount = Number(amountInput.value);
+      const date = dateInput.value;
       const category = categoryInput.value;
 
-      if (description === "" || !Number.isFinite(amount) || amount <= 0) {
-        alert("Укажи описание расхода и сумму больше нуля.");
+      if (description === "" || !Number.isFinite(amount) || amount <= 0 || date === "") {
+        alert("Укажи описание, сумму больше нуля и дату расхода.");
         return;
       }
 
+      const expense = {
+        description: description,
+        amount: amount,
+        category: category,
+        date: date
+      };
+
       if (editingIndex === null) {
-        expenses.push({
-          description: description,
-          amount: amount,
-          category: category
-        });
+        expenses.push(expense);
       } else {
-        expenses[editingIndex] = {
-          description: description,
-          amount: amount,
-          category: category
-        };
+        expenses[editingIndex] = expense;
         editingIndex = null;
         addButton.textContent = "Добавить расход";
       }
 
       saveExpenses();
       renderExpenses();
+
       descriptionInput.value = "";
       amountInput.value = "";
+      dateInput.value = todayString();
     });
 
     categoryFilter.addEventListener("change", renderExpenses);
+    dateFilter.addEventListener("change", renderExpenses);
+
+    document.getElementById("clear-date-filter").addEventListener("click", function () {
+      dateFilter.value = "";
+      renderExpenses();
+    });
+
     renderExpenses();
   </script>
 </body>
