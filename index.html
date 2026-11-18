@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Трекер расходов</title>
 </head>
 <body>
@@ -11,7 +12,7 @@
   <input id="description" type="text" placeholder="Например, кофе">
 
   <label for="amount">Сколько потратил?</label>
-  <input id="amount" type="number" min="1" step="0.01" placeholder="Например, 180">
+  <input id="amount" type="number" min="0.01" step="0.01" placeholder="Например, 180">
 
   <label for="category">Категория:</label>
   <select id="category">
@@ -24,104 +25,131 @@
   <button id="add-expense" type="button">Добавить расход</button>
 
   <h2>Расходы</h2>
-<label for="category-filter">Показать категорию:</label>
-<select id="category-filter">
-  <option value="Все">Все</option>
-  <option value="Еда">Еда</option>
-  <option value="Транспорт">Транспорт</option>
-  <option value="Покупки">Покупки</option>
-  <option value="Другое">Другое</option>
-</select>
+
+  <label for="category-filter">Показать категорию:</label>
+  <select id="category-filter">
+    <option value="Все">Все</option>
+    <option value="Еда">Еда</option>
+    <option value="Транспорт">Транспорт</option>
+    <option value="Покупки">Покупки</option>
+    <option value="Другое">Другое</option>
+  </select>
+
   <ul id="expense-list"></ul>
 
   <p>Всего потрачено: <span id="total">0</span> ₽</p>
-<div id="category-summary"></div>
-<script>
-const expenseList = document.getElementById("expense-list");
-const totalDisplay = document.getElementById("total");
-const descriptionInput = document.getElementById("description");
-const amountInput = document.getElementById("amount");
-const categoryInput = document.getElementById("category");
-const categorySummary = document.getElementById("category-summary");
-const categoryFilter = document.getElementById("category-filter");
+  <div id="category-summary"></div>
 
-let expenses = JSON.parse(localStorage.getItem("expenseTrackerData") || "[]");
+  <script>
+    const expenseList = document.getElementById("expense-list");
+    const totalDisplay = document.getElementById("total");
+    const descriptionInput = document.getElementById("description");
+    const amountInput = document.getElementById("amount");
+    const categoryInput = document.getElementById("category");
+    const categorySummary = document.getElementById("category-summary");
+    const categoryFilter = document.getElementById("category-filter");
+    const addButton = document.getElementById("add-expense");
 
-function saveExpenses() {
-  localStorage.setItem("expenseTrackerData", JSON.stringify(expenses));
-}
+    let expenses = JSON.parse(localStorage.getItem("expenseTrackerData") || "[]");
+    let editingIndex = null;
 
-function renderExpenses() {
-  expenseList.innerHTML = "";
-  categorySummary.innerHTML = "";
+    function saveExpenses() {
+      localStorage.setItem("expenseTrackerData", JSON.stringify(expenses));
+    }
 
-  let total = 0;
-  const categoryTotals = {};
+    function renderExpenses() {
+      expenseList.innerHTML = "";
+      categorySummary.innerHTML = "";
 
-  expenses.forEach(function (expense, index) {
-  if (categoryFilter.value !== "Все" && expense.category !== categoryFilter.value) {
-    return;
-  }
-    const item = document.createElement("li");
-    const expenseText = document.createElement("span");
+      let total = 0;
+      const categoryTotals = {};
 
-    expenseText.textContent =
-      expense.description + " — " + expense.amount.toFixed(2) +
-      " ₽ (" + expense.category + ")";
+      expenses.forEach(function (expense, index) {
+        total += expense.amount;
+        categoryTotals[expense.category] =
+          (categoryTotals[expense.category] || 0) + expense.amount;
 
-    const deleteButton = document.createElement("button");
-    deleteButton.textContent = "Удалить";
-    deleteButton.type = "button";
+        if (categoryFilter.value !== "Все" &&
+            expense.category !== categoryFilter.value) {
+          return;
+        }
 
-    deleteButton.addEventListener("click", function () {
-      expenses.splice(index, 1);
+        const item = document.createElement("li");
+        const expenseText = document.createElement("span");
+        expenseText.textContent =
+          expense.description + " — " + expense.amount.toFixed(2) +
+          " ₽ (" + expense.category + ") ";
+
+        const editButton = document.createElement("button");
+        editButton.textContent = "Изменить";
+        editButton.type = "button";
+        editButton.addEventListener("click", function () {
+          editingIndex = index;
+          descriptionInput.value = expense.description;
+          amountInput.value = expense.amount;
+          categoryInput.value = expense.category;
+          addButton.textContent = "Сохранить изменения";
+        });
+
+        const deleteButton = document.createElement("button");
+        deleteButton.textContent = "Удалить";
+        deleteButton.type = "button";
+        deleteButton.addEventListener("click", function () {
+          expenses.splice(index, 1);
+          saveExpenses();
+          renderExpenses();
+        });
+
+        item.appendChild(expenseText);
+        item.appendChild(editButton);
+        item.appendChild(deleteButton);
+        expenseList.appendChild(item);
+      });
+
+      totalDisplay.textContent = total.toFixed(2);
+
+      Object.keys(categoryTotals).forEach(function (category) {
+        const summaryItem = document.createElement("p");
+        summaryItem.textContent =
+          category + ": " + categoryTotals[category].toFixed(2) + " ₽";
+        categorySummary.appendChild(summaryItem);
+      });
+    }
+
+    addButton.addEventListener("click", function () {
+      const description = descriptionInput.value.trim();
+      const amount = Number(amountInput.value);
+      const category = categoryInput.value;
+
+      if (description === "" || !Number.isFinite(amount) || amount <= 0) {
+        alert("Укажи описание расхода и сумму больше нуля.");
+        return;
+      }
+
+      if (editingIndex === null) {
+        expenses.push({
+          description: description,
+          amount: amount,
+          category: category
+        });
+      } else {
+        expenses[editingIndex] = {
+          description: description,
+          amount: amount,
+          category: category
+        };
+        editingIndex = null;
+        addButton.textContent = "Добавить расход";
+      }
+
       saveExpenses();
       renderExpenses();
+      descriptionInput.value = "";
+      amountInput.value = "";
     });
 
-    item.appendChild(expenseText);
-    item.appendChild(deleteButton);
-    expenseList.appendChild(item);
-
-    total += expense.amount;
-    categoryTotals[expense.category] =
-      (categoryTotals[expense.category] || 0) + expense.amount;
-  });
-
-  totalDisplay.textContent = total.toFixed(2);
-
-  Object.keys(categoryTotals).forEach(function (category) {
-    const summaryItem = document.createElement("p");
-    summaryItem.textContent =
-      category + ": " + categoryTotals[category].toFixed(2) + " ₽";
-    categorySummary.appendChild(summaryItem);
-  });
-}
-
-document.getElementById("add-expense").addEventListener("click", function () {
-  const description = descriptionInput.value.trim();
-  const amount = Number(amountInput.value);
-  const category = categoryInput.value;
-
-  if (description === "" || !Number.isFinite(amount) || amount <= 0) {
-    alert("Укажи описание расхода и сумму больше нуля.");
-    return;
-  }
-
-  expenses.push({
-    description: description,
-    amount: amount,
-    category: category
-  });
-
-  saveExpenses();
-  renderExpenses();
-
-  descriptionInput.value = "";
-  amountInput.value = "";
-});
-categoryFilter.addEventListener("change", renderExpenses);
-renderExpenses();
-</script>
+    categoryFilter.addEventListener("change", renderExpenses);
+    renderExpenses();
+  </script>
 </body>
 </html>
