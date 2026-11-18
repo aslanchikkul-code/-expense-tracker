@@ -24,6 +24,14 @@
   <button id="add-expense" type="button">Добавить расход</button>
 
   <h2>Расходы</h2>
+<label for="category-filter">Показать категорию:</label>
+<select id="category-filter">
+  <option value="Все">Все</option>
+  <option value="Еда">Еда</option>
+  <option value="Транспорт">Транспорт</option>
+  <option value="Покупки">Покупки</option>
+  <option value="Другое">Другое</option>
+</select>
   <ul id="expense-list"></ul>
 
   <p>Всего потрачено: <span id="total">0</span> ₽</p>
@@ -35,6 +43,7 @@ const descriptionInput = document.getElementById("description");
 const amountInput = document.getElementById("amount");
 const categoryInput = document.getElementById("category");
 const categorySummary = document.getElementById("category-summary");
+const categoryFilter = document.getElementById("category-filter");
 
 let expenses = JSON.parse(localStorage.getItem("expenseTrackerData") || "[]");
 
@@ -50,6 +59,9 @@ function renderExpenses() {
   const categoryTotals = {};
 
   expenses.forEach(function (expense, index) {
+  if (categoryFilter.value !== "Все" && expense.category !== categoryFilter.value) {
+    return;
+  }
     const item = document.createElement("li");
     const expenseText = document.createElement("span");
 
@@ -108,7 +120,7 @@ document.getElementById("add-expense").addEventListener("click", function () {
   descriptionInput.value = "";
   amountInput.value = "";
 });
-
+categoryFilter.addEventListener("change", renderExpenses);
 renderExpenses();
 </script>
 </body>
