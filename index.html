@@ -41,6 +41,7 @@
   <label for="date-filter">Дата:</label>
   <input id="date-filter" type="date">
   <button id="clear-date-filter" type="button">Все даты</button>
+  <button id="export-csv" type="button">Скачать CSV</button>
 
   <ul id="expense-list"></ul>
 
@@ -89,10 +90,8 @@
         const matchesCategory =
           categoryFilter.value === "Все" ||
           expense.category === categoryFilter.value;
-
         const matchesDate =
-          dateFilter.value === "" ||
-          expense.date === dateFilter.value;
+          dateFilter.value === "" || expense.date === dateFilter.value;
 
         if (!matchesCategory || !matchesDate) {
           return;
@@ -109,7 +108,6 @@
         const editButton = document.createElement("button");
         editButton.textContent = "Изменить";
         editButton.type = "button";
-
         editButton.addEventListener("click", function () {
           editingIndex = index;
           descriptionInput.value = expense.description;
@@ -122,7 +120,6 @@
         const deleteButton = document.createElement("button");
         deleteButton.textContent = "Удалить";
         deleteButton.type = "button";
-
         deleteButton.addEventListener("click", function () {
           expenses.splice(index, 1);
           saveExpenses();
@@ -185,6 +182,38 @@
     document.getElementById("clear-date-filter").addEventListener("click", function () {
       dateFilter.value = "";
       renderExpenses();
+    });
+
+    document.getElementById("export-csv").addEventListener("click", function () {
+      if (expenses.length === 0) {
+        alert("Пока нет расходов для экспорта.");
+        return;
+      }
+
+      const rows = [
+        ["Дата", "Описание", "Сумма (руб.)", "Категория"],
+        ...expenses.map(function (expense) {
+          return [
+            expense.date || "Дата не указана",
+            expense.description,
+            expense.amount.toFixed(2),
+            expense.category
+          ];
+        })
+      ];
+
+      const csv = "\uFEFF" + rows.map(function (row) {
+        return row.map(function (value) {
+          return '"' + String(value).replace(/"/g, '""') + '"';
+        }).join(";");
+      }).join("\r\n");
+
+      const file = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(file);
+      link.download = "expenses.csv";
+      link.click();
+      URL.revokeObjectURL(link.href);
     });
 
     renderExpenses();
